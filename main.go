@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
+	"path"
 	"strings"
 	"time"
 
@@ -32,7 +34,7 @@ func main() {
 	r.HandleFunc("/health", HealthHandler)
 	r.HandleFunc("/registry/health", RegistryHealthHandler)
 	r.HandleFunc("/registry/catalog", RegistryCatalogHandler)
-	r.HandleFunc("/image/scan", ScanHandler)
+	r.HandleFunc("/image/scan", ImageScanHandler)
 
 	s := &http.Server{
 		Addr:           ":8080",
@@ -146,12 +148,84 @@ func RegistryCatalogHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(strings.Join(catalog, ", ")))
 }
 
-func ScanHandler(w http.ResponseWriter, r *http.Request) {
+func ImageScanHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Println("/image/scan: Got request")
 
-	// TODO:
+	// Parse the Authorization header
+	username, password, err := internal.ParseBasicAuthHeader(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	log.Printf("/image/scan: User credential: %s:%s\n", username, password)
+
+	// Parse the query params
+	regAddrs, isRegAddrPresent := r.URL.Query()["url"]
+	if !isRegAddrPresent {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("No registry address presented."))
+		return
+	}
+
+	for _, u := range regAddrs {
+		log.Printf("/image/scan: Registry url: %s \n", u)
+	}
+	c, err := NewClient(regAddrs[0], username, password, registry.Opt{
+		Insecure: true,
+		Debug:    true,
+		SkipPing: false,
+		Timeout:  time.Second * 3,
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusFailedDependency)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	// Parse Image names
+	targetImages, isImagesPresent := r.URL.Query()["images"]
+	if !isImagesPresent {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Target images not presented."))
+		return
+	}
+	log.Printf("/image/scan: Target images: %s\n", targetImages)
+
+	summary := map[string]int{}
+	for _, targetImage := range strings.Split(targetImages[0], ",") {
+		img, err := registry.ParseImage(path.Join(c.Domain, targetImage))
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		log.Printf("Domain: %s/ Path: %s/ Tag: %s/ Digest: %s/ Reference: %s\n", img.Domain, img.Path, img.Tag, img.Digest, img.Reference())
+
+		report, err := scanner.Vulnerabilities(context.Background(), c, img.Path, img.Reference())
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		for severity, vulnerabilityList := range report.VulnsBySeverity {
+			summary[severity] = len(vulnerabilityList)
+		}
+	}
+
+	dat, err := json.Marshal(summary)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
+	w.Write(dat)
 }
 
 func NewClient(url, username, password string, opt registry.Opt) (*registry.Registry, error) {
