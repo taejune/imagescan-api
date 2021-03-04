@@ -2,22 +2,36 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/genuinetools/reg/clair"
 	"github.com/genuinetools/reg/registry"
 	"github.com/genuinetools/reg/repoutils"
 	"github.com/gorilla/mux"
+
+	"github.com/taejune/imagescan-api/internal"
+)
+
+var (
+	scanner *clair.Clair
 )
 
 func main() {
 
+	clairURL := "http://172.22.11.2:30060"
+	scanner, _ = clair.New(clairURL, clair.Opt{
+		Debug:    true,
+		Insecure: false,
+		Timeout:  time.Second * 3,
+	})
+
 	r := mux.NewRouter()
 	r.HandleFunc("/health", HealthHandler)
 	r.HandleFunc("/registry/health", RegistryHealthHandler)
+	r.HandleFunc("/registry/catalog", RegistryCatalogHandler)
 	r.HandleFunc("/image/scan", ScanHandler)
 
 	s := &http.Server{
@@ -45,19 +59,14 @@ func RegistryHealthHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("/registry/health: Got request")
 
 	// Parse the Authorization header
-	basicAuth := strings.TrimPrefix(r.Header.Get("Authorization"), "Basic ")
-	decodedBasicAuth, err := base64.StdEncoding.DecodeString(basicAuth)
+	username, password, err := internal.ParseBasicAuthHeader(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	tokens := strings.Split(string(decodedBasicAuth), ":")
-	username := tokens[0]
-	password := tokens[1]
-
-	log.Printf("/registry/health: Decoded user credential: %s:%s\n", username, password)
+	log.Printf("/registry/health: User credential: %s:%s\n", username, password)
 
 	// Parse the query params
 	regAddrs, isRegAddrPresent := r.URL.Query()["url"]
@@ -85,6 +94,56 @@ func RegistryHealthHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("OK"))
 	w.WriteHeader(http.StatusOK)
+}
+
+func RegistryCatalogHandler(w http.ResponseWriter, r *http.Request) {
+
+	log.Println("/registry/health: Got request")
+
+	// Parse the Authorization header
+	username, password, err := internal.ParseBasicAuthHeader(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	log.Printf("/registry/health: User credential: %s:%s\n", username, password)
+
+	// Parse the query params
+	regAddrs, isRegAddrPresent := r.URL.Query()["url"]
+	if !isRegAddrPresent {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("No registry address presented."))
+		return
+	}
+
+	for _, u := range regAddrs {
+		log.Printf("/registry/health: Registry url: %s \n", u)
+	}
+
+	c, err := NewClient(regAddrs[0], username, password, registry.Opt{
+		Insecure: true,
+		Debug:    true,
+		SkipPing: false,
+		Timeout:  time.Second * 3,
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusFailedDependency)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	catalog, err := c.Catalog(context.Background(), "")
+	if err != nil {
+		w.WriteHeader(http.StatusFailedDependency)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	// FIXME: convert to json
+	w.Write([]byte(strings.Join(catalog, ", ")))
 }
 
 func ScanHandler(w http.ResponseWriter, r *http.Request) {
