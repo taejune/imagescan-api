@@ -7,5 +7,5 @@ scanner:
     insecure: false
 reporter:
   elasticsearch:
-    url: "172.22.11.2:31292"
+    url: "http://172.22.11.2:31292"
     insecure: false

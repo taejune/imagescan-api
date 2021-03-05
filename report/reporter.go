@@ -38,11 +38,13 @@ func (c *reporter) SendReport(image string, vuls []clair.Vulnerability) error {
 
 	response, err := c.client.Post(endpoint, "application/json", bytes.NewReader(dat))
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	defer response.Body.Close()

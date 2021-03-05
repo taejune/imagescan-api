@@ -1,10 +1,12 @@
 package api
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/docker/distribution"
@@ -12,6 +14,7 @@ import (
 	"github.com/genuinetools/reg/registry"
 	"github.com/genuinetools/reg/repoutils"
 	"github.com/spf13/viper"
+	"github.com/taejune/imagescan-api/report"
 )
 
 func Digest(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +65,7 @@ func Digest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(dat)
 }
@@ -114,6 +118,7 @@ func Manifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(dat)
 }
@@ -173,6 +178,7 @@ func Layer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(dat)
 }
@@ -200,13 +206,13 @@ func Scan(w http.ResponseWriter, r *http.Request) {
 		Timeout:  time.Second * 3,
 	})
 
-	// reporter := report.NewReporter(viper.GetString("reporter.elasticsearch.url"),
-	// 	&http.Transport{
-	// 		TLSClientConfig: &tls.Config{
-	// 			InsecureSkipVerify: true,
-	// 		},
-	// 	},
-	// )
+	reporter := report.NewReporter(viper.GetString("reporter.elasticsearch.url"),
+		&http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	)
 
 	summary := map[string]int{}
 	for _, img := range imgs {
@@ -225,7 +231,7 @@ func Scan(w http.ResponseWriter, r *http.Request) {
 
 		clairReport, err := scanner.Vulnerabilities(ctx, c, img.Path, img.Tag)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return
 		}
@@ -234,7 +240,7 @@ func Scan(w http.ResponseWriter, r *http.Request) {
 			summary[severity] = len(vulnerabilityList)
 		}
 
-		// go reporter.SendReport(path.Join(img.Path, img.Tag), clairReport.Vulns)
+		go reporter.SendReport(path.Join(img.Path, img.Tag), clairReport.Vulns)
 	}
 
 	dat, err := json.Marshal(summary)
@@ -244,6 +250,7 @@ func Scan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(dat)
 }

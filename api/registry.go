@@ -1,8 +1,8 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
-	"strings"
 )
 
 func Catalog(w http.ResponseWriter, r *http.Request) {
@@ -20,7 +20,9 @@ func Catalog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	dat, _ := json.Marshal(catalog)
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	// FIXME: convert to json
-	w.Write([]byte(strings.Join(catalog, ", ")))
+	w.Write(dat)
 }
