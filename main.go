@@ -17,19 +17,12 @@ var (
 
 func main() {
 
-	clairURL := "http://172.22.11.2:30060"
-	scanner, _ = clair.New(clairURL, clair.Opt{
-		Debug:    true,
-		Insecure: false,
-		Timeout:  time.Second * 3,
-	})
-
 	r := mux.NewRouter()
 
 	r.HandleFunc("/health", HealthHandler)
 	r.HandleFunc("/registry/catalog", api.Catalog)
 	r.HandleFunc("/image/digest", api.Digest)
-	// r.HandleFunc("/image/scan", api.Scan)
+	r.HandleFunc("/image/scan", api.Scan)
 
 	s := &http.Server{
 		Addr:           ":8080",

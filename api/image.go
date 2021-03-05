@@ -1,13 +1,13 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/genuinetools/reg/clair"
 	"github.com/genuinetools/reg/registry"
 	"github.com/genuinetools/reg/repoutils"
 )
@@ -30,7 +30,7 @@ func Digest(w http.ResponseWriter, r *http.Request) {
 	imgDigest := map[string]string{}
 	for name, img := range imgs {
 		config, _ := repoutils.GetAuthConfig(username, password, img.Domain)
-		c, err := registry.New(context.TODO(), config, registry.Opt{
+		c, err := registry.New(r.Context(), config, registry.Opt{
 			Insecure: true,
 			Debug:    true,
 			SkipPing: false,
@@ -64,56 +64,65 @@ func Digest(w http.ResponseWriter, r *http.Request) {
 	w.Write(dat)
 }
 
-// func Scan(w http.ResponseWriter, r *http.Request) {
+func Scan(w http.ResponseWriter, r *http.Request) {
 
-// 	username, password, ok := r.BasicAuth()
-// 	if !ok {
-// 		w.WriteHeader(http.StatusUnauthorized)
-// 		w.Write([]byte("Authentication parameter missing"))
-// 		return
-// 	}
+	username, password, ok := r.BasicAuth()
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Authentication parameter missing"))
+		return
+	}
 
-// 	imgs, err := NewImagesFrom(r)
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusBadRequest)
-// 		w.Write([]byte(err.Error()))
-// 	}
+	imgs, err := NewImagesFrom(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+	}
 
-// 	ctx := r.Context()
-// 	summary := map[string]int{}
-// 	for _, img := range imgs {
-// 		config, _ := repoutils.GetAuthConfig(username, password, img.Domain)
-// 		c, err := registry.New(context.TODO(), config, registry.Opt{
-// 			Insecure: true,
-// 			Debug:    true,
-// 			SkipPing: false,
-// 			Timeout:  time.Second * 3,
-// 		})
-// 		if err != nil {
-// 			w.WriteHeader(http.StatusServiceUnavailable)
-// 			w.Write([]byte(err.Error()))
-// 			return
-// 		}
+	ctx := r.Context()
 
-// 		report, err := scanner.Vulnerabilities(ctx, c, img.Path, img.Reference())
-// 		if err != nil {
-// 			w.WriteHeader(http.StatusBadRequest)
-// 			w.Write([]byte(err.Error()))
-// 			return
-// 		}
+	// FIXME: how to deal with other scanner type? (e.q: trivy)
+	clairURL := "http://172.22.11.2:30060"
+	scanner, _ := clair.New(clairURL, clair.Opt{
+		Debug:    true,
+		Insecure: false,
+		Timeout:  time.Second * 3,
+	})
 
-// 		for severity, vulnerabilityList := range report.VulnsBySeverity {
-// 			summary[severity] = len(vulnerabilityList)
-// 		}
-// 	}
+	summary := map[string]int{}
+	for _, img := range imgs {
+		config, _ := repoutils.GetAuthConfig(username, password, img.Domain)
+		c, err := registry.New(r.Context(), config, registry.Opt{
+			Insecure: true,
+			Debug:    true,
+			SkipPing: false,
+			Timeout:  time.Second * 3,
+		})
+		if err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(err.Error()))
+			return
+		}
 
-// 	dat, err := json.Marshal(summary)
-// 	if err != nil {
-// 		w.WriteHeader(http.StatusBadRequest)
-// 		w.Write([]byte(err.Error()))
-// 		return
-// 	}
+		report, err := scanner.Vulnerabilities(ctx, c, img.Path, img.Reference())
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
 
-// 	w.WriteHeader(http.StatusOK)
-// 	w.Write(dat)
-// }
+		for severity, vulnerabilityList := range report.VulnsBySeverity {
+			summary[severity] = len(vulnerabilityList)
+		}
+	}
+
+	dat, err := json.Marshal(summary)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(dat)
+}
