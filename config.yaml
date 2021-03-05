@@ -1,0 +1,11 @@
+scanner:
+  clair:
+    url: "http://172.22.11.2:30060"
+    insecure: false
+  trivy:
+    url:
+    insecure: false
+reporter:
+  elasticsearch:
+    url: ""
+    insecure: false

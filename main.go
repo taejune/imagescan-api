@@ -5,20 +5,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/genuinetools/reg/clair"
 	"github.com/gorilla/mux"
 
 	"github.com/taejune/imagescan-api/api"
 )
 
-var (
-	scanner *clair.Clair
-)
-
 func main() {
 
 	r := mux.NewRouter()
-
 	r.HandleFunc("/health", HealthHandler)
 	r.HandleFunc("/registry/catalog", api.Catalog)
 	r.HandleFunc("/image/digest", api.Digest)

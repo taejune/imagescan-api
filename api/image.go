@@ -10,6 +10,7 @@ import (
 	"github.com/genuinetools/reg/clair"
 	"github.com/genuinetools/reg/registry"
 	"github.com/genuinetools/reg/repoutils"
+	"github.com/spf13/viper"
 )
 
 func Digest(w http.ResponseWriter, r *http.Request) {
@@ -82,8 +83,7 @@ func Scan(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// FIXME: how to deal with other scanner type? (e.q: trivy)
-	clairURL := "http://172.22.11.2:30060"
-	scanner, _ := clair.New(clairURL, clair.Opt{
+	scanner, _ := clair.New(viper.GetString("scanner.clair.url"), clair.Opt{
 		Debug:    true,
 		Insecure: false,
 		Timeout:  time.Second * 3,
