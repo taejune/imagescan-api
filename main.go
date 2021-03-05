@@ -17,6 +17,8 @@ func main() {
 	r.HandleFunc("/registry/catalog", api.Catalog)
 	r.HandleFunc("/image/digest", api.Digest)
 	r.HandleFunc("/image/scan", api.Scan)
+	r.HandleFunc("/image/manifest", api.Manifest)
+	r.HandleFunc("/image/layer", api.Layer)
 
 	s := &http.Server{
 		Addr:           ":8080",

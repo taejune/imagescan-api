@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"net/http"
 	"strings"
 )
@@ -14,7 +13,7 @@ func Catalog(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(err.Error()))
 	}
 
-	catalog, err := c.Catalog(context.Background(), "")
+	catalog, err := c.Catalog(r.Context(), "")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
