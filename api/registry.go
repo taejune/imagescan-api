@@ -9,14 +9,13 @@ func Catalog(w http.ResponseWriter, r *http.Request) {
 
 	c, err := NewRegistryFrom(r)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	catalog, err := c.Catalog(r.Context(), "")
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

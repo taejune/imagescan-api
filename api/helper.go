@@ -18,12 +18,12 @@ func NewRegistryFrom(r *http.Request) (*registry.Registry, error) {
 		return nil, fmt.Errorf("Authentication parameters missing")
 	}
 
-	addrs, ok := r.URL.Query()["url"]
-	if !ok {
+	reg := r.FormValue("url")
+	if reg == "" {
 		return nil, fmt.Errorf("Registry address missing")
 	}
 
-	config, _ := repoutils.GetAuthConfig(username, password, addrs[0])
+	config, _ := repoutils.GetAuthConfig(username, password, reg)
 	c, err := registry.New(context.TODO(), config, registry.Opt{
 		Insecure: true,
 		Debug:    true,
@@ -41,14 +41,13 @@ func NewImagesFrom(r *http.Request) (map[string]*registry.Image, error) {
 
 	ret := map[string]*registry.Image{}
 
-	images, ok := r.URL.Query()["names"]
-	if !ok {
+	images := r.FormValue("names")
+	if images == "" {
 		return nil, fmt.Errorf("Target images missing")
 	}
-	images = strings.Split(images[0], ",")
 	log.Printf("/image/digest: Target images: %s\n", images)
 
-	for _, e := range images {
+	for _, e := range strings.Split(images, ",") {
 		img, err := registry.ParseImage(e)
 		if err != nil {
 			return nil, fmt.Errorf("Parsing image(%s) failed: %s", e, err)
