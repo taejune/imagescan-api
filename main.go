@@ -1,16 +1,18 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
+	"github.com/genuinetools/reg/clair"
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	"github.com/taejune/imagescan-api/api"
+	"github.com/taejune/imagescan-api/store"
 )
 
 func init() {
@@ -31,20 +33,38 @@ func init() {
 
 func main() {
 
-	logger := zap.NewExample()
+	logger := zap.NewExample().Sugar()
 	defer logger.Sync()
 
-	sugar := logger.Sugar()
-
-	sugar.Info("Start ImageScanAPI server...")
+	// TODO: Support trivy
+	scanner, _ := clair.New(viper.GetString("scanner.clair.url"), clair.Opt{
+		Debug:    true,
+		Insecure: false,
+		Timeout:  time.Second * 3,
+	})
+	// TODO: Support other storage
+	store := store.NewStore(viper.GetString("reporter.elasticsearch.url"),
+		&http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+		logger,
+	)
+	api := api.NewScanAPI(scanner, store, logger, api.Opt{
+		Insecure: true,
+		Debug:    true,
+		SkipPing: false,
+		Timeout:  time.Second * 3,
+	})
 
 	r := mux.NewRouter()
-	r.HandleFunc("/health", HealthHandler)
-	r.HandleFunc("/registry/catalog", api.Catalog)
-	r.HandleFunc("/image/digest", api.Digest)
-	r.HandleFunc("/image/scan", api.Scan)
-	r.HandleFunc("/image/manifest", api.Manifest)
-	r.HandleFunc("/image/layer", api.Layer)
+	r.HandleFunc("/health", health)
+	r.HandleFunc("/registry/catalog", api.Catalog).Methods("GET")
+	r.HandleFunc("/digest", api.Digest).Methods("GET")
+	r.HandleFunc("/manifest", api.Manifest).Methods("GET")
+	r.HandleFunc("/scan", api.Scan).Methods("POST")
+	// r.HandleFunc("/image/layer", api.Layer)
 
 	s := &http.Server{
 		Addr:           ":8080",
@@ -54,14 +74,11 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	sugar.Info("Listening on :8080")
-	sugar.Fatal(s.ListenAndServe())
+	logger.Info("Listening on :8080")
+	logger.Fatal(s.ListenAndServe())
 }
 
-func HealthHandler(w http.ResponseWriter, r *http.Request) {
-
-	log.Println("/health: Got request")
-
+func health(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }

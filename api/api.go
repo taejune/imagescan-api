@@ -1,18 +1,44 @@
 package api
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/genuinetools/reg/clair"
 	"github.com/genuinetools/reg/registry"
 	"github.com/genuinetools/reg/repoutils"
+	"github.com/taejune/imagescan-api/store"
+	"go.uber.org/zap"
 )
 
-func NewRegistryFrom(r *http.Request) (*registry.Registry, error) {
+type ScanAPI struct {
+	// FIXME: how to deal with other scanner type? (e.q: trivy)
+	scanner *clair.Clair
+	store   *store.Store
+	logger  *zap.SugaredLogger
+	opt     Opt
+}
+
+type Opt struct {
+	Insecure bool
+	Debug    bool
+	SkipPing bool
+	Timeout  time.Duration
+}
+
+func NewScanAPI(scanner *clair.Clair, store *store.Store, logger *zap.SugaredLogger, opt Opt) *ScanAPI {
+	return &ScanAPI{
+		scanner: scanner,
+		store:   store,
+		logger:  logger,
+		opt:     opt,
+	}
+}
+
+func NewRegistryFrom(r *http.Request, opt Opt) (*registry.Registry, error) {
 	username, password, ok := r.BasicAuth()
 	if !ok {
 		return nil, fmt.Errorf("Authentication parameters missing")
@@ -24,11 +50,11 @@ func NewRegistryFrom(r *http.Request) (*registry.Registry, error) {
 	}
 
 	config, _ := repoutils.GetAuthConfig(username, password, reg)
-	c, err := registry.New(context.TODO(), config, registry.Opt{
-		Insecure: true,
-		Debug:    true,
-		SkipPing: false,
-		Timeout:  time.Second * 3,
+	c, err := registry.New(r.Context(), config, registry.Opt{
+		Insecure: opt.Insecure,
+		Debug:    opt.Debug,
+		SkipPing: opt.SkipPing,
+		Timeout:  opt.Timeout,
 	})
 	if err != nil {
 		return nil, err
