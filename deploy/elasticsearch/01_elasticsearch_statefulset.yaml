@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+spec:
+  serviceName: elasticsearch
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+      - name: elasticsearch
+        image: azssi/opendistro-els
+        imagePullPolicy: Always
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo ${OPENDISTO_ARALM_EMAIL_SENDER_USERNAME} | sh ./bin/elasticsearch-keystore add --stdin --force opendistro.alerting.destination.email.notification.username
+          echo ${OPENDISTO_ARALM_EMAIL_SENDER_PASSWORD} | sh ./bin/elasticsearch-keystore add --stdin --force opendistro.alerting.destination.email.notification.password
+          /usr/local/bin/docker-entrypoint.sh eswrapper
+        env:
+        - name: cluster.name
+          value: elasticsearch
+        - name: node.name
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: cluster.initial_master_nodes
+          value: elasticsearch-0,
+        - name: discovery.seed_hosts
+          value: elasticsearch
+        - name: ES_JAVA_OPTS
+          value: -Xms2g -Xmx2g
+        - name: ELASTIC_PASSWORD
+          value: changeme
+        - name: OPENDISTO_ARALM_EMAIL_SENDER_USERNAME
+          value: poptmaxcloud@gmail.com
+        - name: OPENDISTO_ARALM_EMAIL_SENDER_PASSWORD
+          value: 2019114!
+        ports:
+        - name: http
+          containerPort: 9200
+        - name: transport
+          containerPort: 9300
+        volumeMounts:
+        - name: config
+          mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+          subPath: elasticsearch_config.yml
+      initContainers:
+      - name: fix-permissions
+        image: busybox:1.32.0
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - chown -R 1000:1000 /usr/share/elasticsearch/data
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: data
+          mountPath: /usr/share/elasticsearch/data
+      - command:
+        - sysctl
+        - -w
+        - vm.max_map_count=262144
+        image: busybox:1.32.0
+        imagePullPolicy: IfNotPresent
+        name: increase-vm-max-map
+        securityContext:
+          privileged: true
+      - command: 
+        - sh
+        - -c
+        - ulimit -n 65536
+        image: busybox:1.32.0
+        imagePullPolicy: IfNotPresent
+        name: increase-fd-ulimit
+        securityContext:
+          privileged: true
+      restartPolicy: Always
+      volumes:
+      - name: config
+        configMap:
+          name: elasticsearch-config
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: csi-cephfs-sc
+      resources:
+        requests:
+          storage: 5Gi
+      

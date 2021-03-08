@@ -1,0 +1,23 @@
+resources:
+- 01_elasticsearch_statefulset.yaml
+- 02_elasticsearch_service.yaml
+- 03_kibana_deployment.yaml
+- 04_kibana_service.yaml
+configMapGenerator:
+- name: elasticsearch-config
+  files:
+  - elasticsearch_config.yml
+- name: kibana-config
+  files:
+  - kibana_config.yml
+secretGenerator:
+- name: kibana-tls
+  files:
+  - tls.crt
+  - tls.key
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    type: generated
+  annotations:
+    note: generated
