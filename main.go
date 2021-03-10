@@ -16,7 +16,6 @@ import (
 )
 
 func init() {
-
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
@@ -25,10 +24,6 @@ func init() {
 	if err != nil {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
-
-	viper.SetDefault("scanner.clair.url", "http://localhost:6060")
-	viper.SetDefault("scanner.trivy.url", "http://localhost:6061")
-	viper.SetDefault("reporter.elasticsearch.url", "http://localhost:9200")
 }
 
 func main() {
@@ -37,22 +32,23 @@ func main() {
 	defer logger.Sync()
 
 	// TODO: Support trivy
-	scanner, _ := clair.New(viper.GetString("scanner.clair.url"), clair.Opt{
+	scanner, _ := clair.New(viper.GetString("scanner.url"), clair.Opt{
 		Debug:    false,
-		Insecure: false,
+		Insecure: viper.GetBool("scanner.insecure"),
 		Timeout:  time.Second * 3,
 	})
+
 	// TODO: Support other storage
-	store := store.NewStore(viper.GetString("reporter.elasticsearch.url"),
+	store := store.NewStore(viper.GetString("reporter.url"),
 		&http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
+				InsecureSkipVerify: viper.GetBool("reporter.insecure"),
 			},
 		},
 		logger,
 	)
 	api := api.NewScanAPI(scanner, store, logger, &api.Opt{
-		Insecure: true,
+		Insecure: viper.GetBool("scanner.insecure"),
 		Debug:    false,
 		SkipPing: false,
 		Timeout:  time.Minute * 3,

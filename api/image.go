@@ -13,6 +13,8 @@ func (h *ScanAPI) Digest(w http.ResponseWriter, r *http.Request) {
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
+	h.logger.Infow("Start api/Digest", "API", "Digest", "registry", c.URL, "image", path.Join(img.Path, img.Tag))
+
 	digest, err := c.Digest(r.Context(), *img)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to get digest(%s): %s\n", img.Path, err), http.StatusNotFound)
@@ -34,6 +36,8 @@ func (h *ScanAPI) Manifest(w http.ResponseWriter, r *http.Request) {
 
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
+
+	h.logger.Infow("Start api/Manifest", "API", "Manifest", "registry", c.URL, "image", path.Join(img.Path, img.Tag))
 
 	manifest, err := c.Manifest(r.Context(), img.Path, img.Reference())
 	if err != nil {
@@ -57,6 +61,8 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
+	h.logger.Infow("Start api/Scan", "API", "Scan", "registry", c.URL, "image", path.Join(img.Path, img.Tag))
+
 	digest, err := c.Digest(r.Context(), *img)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to fetch digest(%s): %s\n", img.Path, err), http.StatusNotFound)
@@ -69,7 +75,7 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.Infow("Check if report already is in the store", "digest", digest)
+	h.logger.Infow("Check if report already is in the store", "api", "scan", "digest", digest)
 	isScanned, err := h.store.Exist(string(digest))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to fetch report(%s): %s\n", digest, err), http.StatusNotFound)
@@ -105,6 +111,8 @@ func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
 
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
+
+	h.logger.Infow("Start api/Report", "API", "Report", "registry", c.URL, "image", path.Join(img.Path, img.Tag))
 
 	digest, err := c.Digest(r.Context(), *img)
 	if err != nil {

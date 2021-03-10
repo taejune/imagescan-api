@@ -133,8 +133,6 @@ func (s *Store) Save(digest string, report clair.VulnerabilityReport) error {
 		return err
 	}
 
-	s.logger.Infow("POST vulnerability report", "url", endpoint)
-	// FIXME: Change to use transport.RoundTrip()
 	response, err := s.client.Post(endpoint, "application/json", bytes.NewReader(dat))
 	if err != nil {
 		s.logger.Errorw("Failed POST", "msg", err)
