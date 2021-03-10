@@ -69,6 +69,19 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.logger.Infow("Check if report already is in the store", "digest", digest)
+	isScanned, err := h.store.Exist(string(digest))
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to fetch report(%s): %s\n", digest, err), http.StatusNotFound)
+		return
+	}
+
+	if isScanned {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Already scanned image"))
+		return
+	}
+
 	go func() {
 		AddScanning(digest)
 		defer RemoveScanning(digest)
@@ -84,7 +97,7 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte(fmt.Sprintf("Scan image: %s", path.Join(img.Path, img.Tag))))
 }
 

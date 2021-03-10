@@ -45,6 +45,44 @@ type esResponse struct {
 	Source  clair.VulnerabilityReport `json:"_source"`
 }
 
+func (s *Store) Exist(digest string) (bool, error) {
+
+	index := "imgscantest"
+	doc := url.PathEscape(digest)
+	endpoint := fmt.Sprintf("%s/%s/_doc/%s", s.addr, index, doc)
+
+	s.logger.Infow("GET vulnerability report", "url", endpoint)
+
+	// FIXME: Change to use transport.RoundTrip()
+	response, err := s.client.Get(endpoint)
+	if err != nil {
+		s.logger.Error(err)
+		return false, err
+	}
+
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		s.logger.Error(err)
+		return false, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode >= 300 {
+		s.logger.Errorw("Response code", "msg", err, "status", response.StatusCode)
+		return false, err
+	}
+	s.logger.Infow("GET report success")
+
+	var dat esResponse
+	err = json.Unmarshal(body, &dat)
+	if err != nil {
+		s.logger.Error(err)
+		return false, err
+	}
+
+	return dat.Found, nil
+}
+
 func (s *Store) Get(digest string) (*clair.VulnerabilityReport, error) {
 
 	index := "imgscantest"
