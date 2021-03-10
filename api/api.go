@@ -2,9 +2,8 @@ package api
 
 import (
 	"fmt"
-	"log"
 	"net/http"
-	"strings"
+	"net/url"
 	"time"
 
 	"github.com/genuinetools/reg/clair"
@@ -38,50 +37,39 @@ func NewScanAPI(scanner *clair.Clair, store *store.Store, logger *zap.SugaredLog
 	}
 }
 
-func NewRegistryFrom(r *http.Request, opt Opt) (*registry.Registry, error) {
-	username, password, ok := r.BasicAuth()
-	if !ok {
-		return nil, fmt.Errorf("Authentication parameters missing")
-	}
+func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
 
-	reg := r.FormValue("url")
-	if reg == "" {
-		return nil, fmt.Errorf("Registry address missing")
-	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-	config, _ := repoutils.GetAuthConfig(username, password, reg)
-	c, err := registry.New(r.Context(), config, registry.Opt{
-		Insecure: opt.Insecure,
-		Debug:    opt.Debug,
-		SkipPing: opt.SkipPing,
-		Timeout:  opt.Timeout,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return c, nil
-}
-
-func NewImagesFrom(r *http.Request) (map[string]*registry.Image, error) {
-
-	ret := map[string]*registry.Image{}
-
-	images := r.FormValue("names")
-	if images == "" {
-		return nil, fmt.Errorf("Target images missing")
-	}
-	log.Printf("/image/digest: Target images: %s\n", images)
-
-	for _, e := range strings.Split(images, ",") {
-		img, err := registry.ParseImage(e)
+		imgParam, _ := url.QueryUnescape(r.FormValue("image"))
+		img, err := registry.ParseImage(imgParam)
 		if err != nil {
-			return nil, fmt.Errorf("Parsing image(%s) failed: %s", e, err)
+			http.Error(w, fmt.Sprintf("Parsing image(%s) failed: %s", imgParam, err), http.StatusInternalServerError)
+			return
 		}
 
-		ret[e] = &img
-		log.Printf("Domain: %s | Path: %s | Tag: %s | Digest: %s | Reference: %s\n", img.Domain, img.Path, img.Tag, img.Digest, img.Reference())
-	}
+		username, password, ok := r.BasicAuth()
+		if !ok {
+			http.Error(w, "Authentication parameters missing", http.StatusUnauthorized)
+			return
+		}
 
-	return ret, nil
+		config, _ := repoutils.GetAuthConfig(username, password, img.Domain)
+		reg, err := registry.New(r.Context(), config, registry.Opt{
+			Insecure: h.opt.Insecure,
+			Debug:    h.opt.Debug,
+			SkipPing: h.opt.SkipPing,
+			Timeout:  h.opt.Timeout,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		ctx := r.Context()
+		ctx = WithImage(ctx, &img)
+		ctx = WithRegistry(ctx, reg)
+
+		next(w, r.WithContext(ctx))
+	})
 }
