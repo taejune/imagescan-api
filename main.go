@@ -38,7 +38,7 @@ func main() {
 
 	// TODO: Support trivy
 	scanner, _ := clair.New(viper.GetString("scanner.clair.url"), clair.Opt{
-		Debug:    true,
+		Debug:    false,
 		Insecure: false,
 		Timeout:  time.Second * 3,
 	})
@@ -53,7 +53,7 @@ func main() {
 	)
 	api := api.NewScanAPI(scanner, store, logger, &api.Opt{
 		Insecure: true,
-		Debug:    true,
+		Debug:    false,
 		SkipPing: false,
 		Timeout:  time.Minute * 3,
 	})

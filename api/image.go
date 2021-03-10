@@ -1,9 +1,11 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path"
 )
 
 func (h *ScanAPI) Digest(w http.ResponseWriter, r *http.Request) {
@@ -61,22 +63,29 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	report, err := h.scanner.Vulnerabilities(r.Context(), c, img.Path, img.Tag)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	go h.store.Save(string(digest), report)
-
-	dat, err := json.Marshal(report)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if IsScanning(digest) {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Already in scanning"))
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	go func() {
+		AddScanning(digest)
+		defer RemoveScanning(digest)
+
+		report, err := h.scanner.Vulnerabilities(context.Background(), c, img.Path, img.Tag)
+		if err != nil {
+			h.logger.Error(err)
+			return
+		}
+		err = h.store.Save(string(digest), report)
+		if err != nil {
+			h.logger.Error(err)
+		}
+	}()
+
 	w.WriteHeader(http.StatusOK)
-	w.Write(dat)
+	w.Write([]byte(fmt.Sprintf("Scan image: %s", path.Join(img.Path, img.Tag))))
 }
 
 func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
@@ -87,6 +96,12 @@ func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
 	digest, err := c.Digest(r.Context(), *img)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to fetch digest(%s): %s\n", img.Path, err), http.StatusNotFound)
+		return
+	}
+
+	if IsScanning(digest) {
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.Write([]byte("Scanning not finished"))
 		return
 	}
 

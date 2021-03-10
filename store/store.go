@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"path"
 
 	"github.com/genuinetools/reg/clair"
 	"go.uber.org/zap"
@@ -86,7 +85,6 @@ func (s *Store) Get(digest string) (*clair.VulnerabilityReport, error) {
 
 func (s *Store) Save(digest string, report clair.VulnerabilityReport) error {
 
-	s.logger.Infow("Send report", "name", digest, "image", path.Join(report.RegistryURL, report.Repo))
 	index := "imgscantest"
 	doc := url.PathEscape(digest)
 	endpoint := fmt.Sprintf("%s/%s/_doc/%s", s.addr, index, doc)
@@ -117,6 +115,6 @@ func (s *Store) Save(digest string, report clair.VulnerabilityReport) error {
 		return err
 	}
 
-	s.logger.Infow("Sending report success", "statusCode", response.StatusCode, "body", string(body))
+	s.logger.Infow("Sending report success", "body", string(body))
 	return nil
 }
