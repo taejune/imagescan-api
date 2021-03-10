@@ -64,6 +64,7 @@ func main() {
 	r.HandleFunc("/digest", api.Digest).Methods("GET")
 	r.HandleFunc("/manifest", api.Manifest).Methods("GET")
 	r.HandleFunc("/scan", api.Scan).Methods("POST")
+	r.HandleFunc("/report", api.Report).Methods("GET")
 	// r.HandleFunc("/image/layer", api.Layer)
 
 	s := &http.Server{

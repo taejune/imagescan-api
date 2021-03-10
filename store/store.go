@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"path"
 
 	"github.com/genuinetools/reg/clair"
 	"go.uber.org/zap"
@@ -35,7 +36,17 @@ func NewStore(url string, transport *http.Transport, logger *zap.SugaredLogger) 
 	}
 }
 
-func (s *Store) Get(digest string) error {
+type esResponse struct {
+	Index   string                    `json:"_index"`
+	Id      string                    `json:"_id"`
+	Version int                       `json:"_ind_versionex"`
+	Score   int                       `json:"_score"`
+	Type    string                    `json:"_type"`
+	Found   bool                      `json:"found"`
+	Source  clair.VulnerabilityReport `json:"_source"`
+}
+
+func (s *Store) Get(digest string) (*clair.VulnerabilityReport, error) {
 
 	index := "imgscantest"
 	doc := url.PathEscape(digest)
@@ -47,29 +58,37 @@ func (s *Store) Get(digest string) error {
 	response, err := s.client.Get(endpoint)
 	if err != nil {
 		s.logger.Error(err)
-		return err
+		return nil, err
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		s.logger.Error(err)
-		return err
+		return nil, err
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode >= 300 {
 		s.logger.Errorw("Response code", "msg", err, "status", response.StatusCode)
-		return err
+		return nil, err
+	}
+	s.logger.Infow("GET report success")
+
+	var dat esResponse
+	err = json.Unmarshal(body, &dat)
+	if err != nil {
+		s.logger.Error(err)
+		return nil, err
 	}
 
-	s.logger.Infow("GET report success", "statusCode", response.StatusCode, "body", body)
-	return nil
+	return &dat.Source, nil
 }
 
-func (s *Store) Save(report clair.VulnerabilityReport) error {
+func (s *Store) Save(digest string, report clair.VulnerabilityReport) error {
 
+	s.logger.Infow("Send report", "name", digest, "image", path.Join(report.RegistryURL, report.Repo))
 	index := "imgscantest"
-	doc := url.PathEscape(report.Name)
+	doc := url.PathEscape(digest)
 	endpoint := fmt.Sprintf("%s/%s/_doc/%s", s.addr, index, doc)
 
 	dat, err := json.Marshal(report)
