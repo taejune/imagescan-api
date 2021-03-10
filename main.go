@@ -51,11 +51,11 @@ func main() {
 		},
 		logger,
 	)
-	api := api.NewScanAPI(scanner, store, logger, api.Opt{
+	api := api.NewScanAPI(scanner, store, logger, &api.Opt{
 		Insecure: true,
 		Debug:    true,
 		SkipPing: false,
-		Timeout:  time.Second * 3,
+		Timeout:  time.Minute * 3,
 	})
 
 	r := mux.NewRouter()

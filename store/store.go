@@ -35,13 +35,13 @@ func NewStore(url string, transport *http.Transport, logger *zap.SugaredLogger) 
 	}
 }
 
-func (s *Store) Get(image string) error {
+func (s *Store) Get(digest string) error {
 
 	index := "imgscantest"
-	doc := url.QueryEscape(image)
+	doc := url.PathEscape(digest)
 	endpoint := fmt.Sprintf("%s/%s/_doc/%s", s.addr, index, doc)
 
-	s.logger.Info("GET vulnerability report", zap.String("url", endpoint))
+	s.logger.Infow("GET vulnerability report", "url", endpoint)
 
 	// FIXME: Change to use transport.RoundTrip()
 	response, err := s.client.Get(endpoint)
@@ -57,47 +57,47 @@ func (s *Store) Get(image string) error {
 	}
 	defer response.Body.Close()
 
-	if response.StatusCode >= 400 && response.StatusCode < 600 {
-		s.logger.Error("Failed to get report" + err.Error())
-		return fmt.Errorf(fmt.Sprintf("ES server respond with %d(%s)\n", response.StatusCode, body))
+	if response.StatusCode >= 300 {
+		s.logger.Errorw("Response code", "msg", err, "status", response.StatusCode)
+		return err
 	}
 
-	s.logger.Info("GET report success", zap.Int("statusCode", response.StatusCode), zap.String("body", string(body)))
+	s.logger.Infow("GET report success", "statusCode", response.StatusCode, "body", body)
 	return nil
 }
 
-func (s *Store) Save(image string, vuls []clair.Vulnerability) error {
+func (s *Store) Save(report clair.VulnerabilityReport) error {
 
 	index := "imgscantest"
-	doc := url.QueryEscape(image)
+	doc := url.PathEscape(report.Name)
 	endpoint := fmt.Sprintf("%s/%s/_doc/%s", s.addr, index, doc)
 
-	dat, err := json.Marshal(vuls)
+	dat, err := json.Marshal(report)
 	if err != nil {
 		s.logger.Error(err)
 		return err
 	}
 
-	s.logger.Info("POST vulnerability report", zap.String("url", endpoint), zap.String("body", string(dat)))
+	s.logger.Infow("POST vulnerability report", "url", endpoint)
 	// FIXME: Change to use transport.RoundTrip()
 	response, err := s.client.Post(endpoint, "application/json", bytes.NewReader(dat))
 	if err != nil {
-		s.logger.Error(err)
+		s.logger.Errorw("Failed POST", "msg", err)
 		return err
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		s.logger.Error(err)
+		s.logger.Errorw("Failed read body", "msg", err)
 		return err
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode >= 300 {
-		s.logger.Error(err.Error())
-		return fmt.Errorf(fmt.Sprintf("ES server respond with %d(%s)\n", response.StatusCode, body))
+		s.logger.Errorw("Response code", "msg", err, "status", response.StatusCode)
+		return err
 	}
 
-	s.logger.Info("Sending report success", zap.Int("statusCode", response.StatusCode), zap.String("body", string(body)))
+	s.logger.Infow("Sending report success", "statusCode", response.StatusCode, "body", string(body))
 	return nil
 }

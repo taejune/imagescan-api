@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"path"
 
 	"github.com/genuinetools/reg/registry"
 	"github.com/genuinetools/reg/repoutils"
@@ -145,5 +144,5 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(dat)
 
-	go h.store.Save(path.Join(img.Path, img.Tag), clairReport.Vulns)
+	go h.store.Save(clairReport)
 }

@@ -19,7 +19,7 @@ type ScanAPI struct {
 	scanner *clair.Clair
 	store   *store.Store
 	logger  *zap.SugaredLogger
-	opt     Opt
+	opt     *Opt
 }
 
 type Opt struct {
@@ -29,7 +29,7 @@ type Opt struct {
 	Timeout  time.Duration
 }
 
-func NewScanAPI(scanner *clair.Clair, store *store.Store, logger *zap.SugaredLogger, opt Opt) *ScanAPI {
+func NewScanAPI(scanner *clair.Clair, store *store.Store, logger *zap.SugaredLogger, opt *Opt) *ScanAPI {
 	return &ScanAPI{
 		scanner: scanner,
 		store:   store,
