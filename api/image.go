@@ -13,7 +13,7 @@ func (h *ScanAPI) Digest(w http.ResponseWriter, r *http.Request) {
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
-	h.logger.Infow("Start api/Digest", "API", "Digest", "registry", c.URL, "image", path.Join(img.Path, img.Tag))
+	h.logger.Infow("Start digest", "registry", c.URL, "image", img.Path, "tag", img.Tag)
 
 	digest, err := c.Digest(r.Context(), *img)
 	if err != nil {
@@ -37,7 +37,7 @@ func (h *ScanAPI) Manifest(w http.ResponseWriter, r *http.Request) {
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
-	h.logger.Infow("Start api/Manifest", "API", "Manifest", "registry", c.URL, "image", path.Join(img.Path, img.Tag))
+	h.logger.Infow("Start manifest", "registry", c.URL, "image", img.Path, "tag", img.Tag)
 
 	manifest, err := c.Manifest(r.Context(), img.Path, img.Reference())
 	if err != nil {
@@ -61,7 +61,7 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
-	h.logger.Infow("Start api/Scan", "API", "Scan", "registry", c.URL, "image", path.Join(img.Path, img.Tag))
+	h.logger.Infow("Start scan", "registry", c.URL, "image", img.Path, "tag", img.Tag)
 
 	digest, err := c.Digest(r.Context(), *img)
 	if err != nil {
@@ -112,7 +112,7 @@ func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
-	h.logger.Infow("Start api/Report", "API", "Report", "registry", c.URL, "image", path.Join(img.Path, img.Tag))
+	h.logger.Infow("Start report", "registry", c.URL, "image", img.Path, "tag", img.Tag)
 
 	digest, err := c.Digest(r.Context(), *img)
 	if err != nil {
