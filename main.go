@@ -29,6 +29,7 @@ func init() {
 
 func main() {
 	var port int
+	var debug bool
 	var insecureRegistry bool
 	var scannerURL string
 	var insecureScanner bool
@@ -36,13 +37,14 @@ func main() {
 	var insecureReporter bool
 
 	flag.IntVar(&port, "port", 8080, "The server port number(default: 8080)")
+	flag.BoolVar(&debug, "debug", false, "verbose")
 	flag.BoolVar(&insecureRegistry, "registry-insecure", viper.GetBool("registry.insecure"),
 		"Allow insecure connection to registry")
 	flag.StringVar(&scannerURL, "scanner-url", viper.GetString("scanner.url"), "The URL of scanner")
 	flag.BoolVar(&insecureScanner, "scanner-insecure", viper.GetBool("scanner.insecure"),
 		"Allow insecure connection to scanner")
-	flag.StringVar(&reporterURL, "report-url", viper.GetString("reporter.url"), "The URL of reporter")
-	flag.BoolVar(&insecureReporter, "report-insecure", viper.GetBool("reporter.insecure"),
+	flag.StringVar(&reporterURL, "reporter-url", viper.GetString("reporter.url"), "The URL of reporter")
+	flag.BoolVar(&insecureReporter, "reporter-insecure", viper.GetBool("reporter.insecure"),
 		"Allow insecure connection to reporter")
 	flag.Parse()
 
@@ -51,9 +53,9 @@ func main() {
 
 	// TODO: Support trivy
 	scanner, _ := clair.New(scannerURL, clair.Opt{
-		Debug:    false,
+		Debug:    debug,
 		Insecure: insecureScanner,
-		Timeout:  time.Second * 3,
+		Timeout:  time.Minute * 5,
 	})
 
 	// TODO: Support other storage
@@ -67,9 +69,9 @@ func main() {
 	)
 	api := api.NewScanAPI(scanner, store, logger, &api.Opt{
 		Insecure: insecureRegistry,
-		Debug:    false,
+		Debug:    debug,
 		SkipPing: false,
-		Timeout:  time.Minute * 3,
+		Timeout:  time.Minute * 5,
 	})
 
 	r := mux.NewRouter()
