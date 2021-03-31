@@ -2,8 +2,10 @@ package main
 
 import (
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/genuinetools/reg/clair"
@@ -19,7 +21,6 @@ func init() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
-
 	err := viper.ReadInConfig()
 	if err != nil {
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
@@ -27,28 +28,45 @@ func init() {
 }
 
 func main() {
+	var port int
+	var insecureRegistry bool
+	var scannerURL string
+	var insecureScanner bool
+	var reporterURL string
+	var insecureReporter bool
+
+	flag.IntVar(&port, "port", 8080, "The server port number(default: 8080)")
+	flag.BoolVar(&insecureRegistry, "registry-insecure", viper.GetBool("registry.insecure"),
+		"Allow insecure connection to registry")
+	flag.StringVar(&scannerURL, "scanner-url", viper.GetString("scanner.url"), "The URL of scanner")
+	flag.BoolVar(&insecureScanner, "scanner-insecure", viper.GetBool("scanner.insecure"),
+		"Allow insecure connection to scanner")
+	flag.StringVar(&reporterURL, "report-url", viper.GetString("reporter.url"), "The URL of reporter")
+	flag.BoolVar(&insecureReporter, "report-insecure", viper.GetBool("reporter.insecure"),
+		"Allow insecure connection to reporter")
+	flag.Parse()
 
 	logger := zap.NewExample().Sugar()
 	defer logger.Sync()
 
 	// TODO: Support trivy
-	scanner, _ := clair.New(viper.GetString("scanner.url"), clair.Opt{
+	scanner, _ := clair.New(scannerURL, clair.Opt{
 		Debug:    false,
-		Insecure: viper.GetBool("scanner.insecure"),
+		Insecure: insecureScanner,
 		Timeout:  time.Second * 3,
 	})
 
 	// TODO: Support other storage
-	store := store.NewStore(viper.GetString("reporter.url"),
+	store := store.NewStore(reporterURL,
 		&http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: viper.GetBool("reporter.insecure"),
+				InsecureSkipVerify: insecureReporter,
 			},
 		},
 		logger,
 	)
 	api := api.NewScanAPI(scanner, store, logger, &api.Opt{
-		Insecure: viper.GetBool("scanner.insecure"),
+		Insecure: insecureRegistry,
 		Debug:    false,
 		SkipPing: false,
 		Timeout:  time.Minute * 3,
@@ -64,14 +82,14 @@ func main() {
 	// r.HandleFunc("/image/layer", api.Layer)
 
 	s := &http.Server{
-		Addr:           ":8080",
+		Addr:           ":" + strconv.Itoa(port),
 		Handler:        r,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	logger.Info("Listening on :8080")
+	logger.Infow("Listening on " + strconv.Itoa(port))
 	logger.Fatal(s.ListenAndServe())
 }
 
