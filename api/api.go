@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"time"
@@ -38,22 +37,20 @@ func NewScanAPI(scanner *clair.Clair, store *store.Store, logger *zap.SugaredLog
 }
 
 func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
-
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		imgParam, _ := url.QueryUnescape(r.FormValue("image"))
 		img, err := registry.ParseImage(imgParam)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Parsing image(%s) failed: %s", imgParam, err), http.StatusInternalServerError)
+			h.logger.Error(err)
+			http.Error(w, "image parsing failed", http.StatusInternalServerError)
 			return
 		}
-
 		username, password, ok := r.BasicAuth()
 		if !ok {
-			http.Error(w, "Authentication parameters missing", http.StatusUnauthorized)
+			h.logger.Error(err)
+			http.Error(w, "authentication parameters missing", http.StatusUnauthorized)
 			return
 		}
-
 		config, _ := repoutils.GetAuthConfig(username, password, img.Domain)
 		reg, err := registry.New(r.Context(), config, registry.Opt{
 			Insecure: h.opt.Insecure,
@@ -62,14 +59,12 @@ func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
 			Timeout:  h.opt.Timeout,
 		})
 		if err != nil {
+			h.logger.Error(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		ctx := r.Context()
-		ctx = WithImage(ctx, &img)
+		ctx := WithImage(r.Context(), &img)
 		ctx = WithRegistry(ctx, reg)
-
 		next(w, r.WithContext(ctx))
 	})
 }
