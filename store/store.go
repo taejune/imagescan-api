@@ -29,7 +29,7 @@ func NewStore(url string, transport *http.Transport, logger *zap.SugaredLogger) 
 		client: &http.Client{
 			Transport: transport,
 		},
-		logger: logger,
+		logger: logger.Named("store"),
 	}
 }
 

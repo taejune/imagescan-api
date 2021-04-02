@@ -31,7 +31,7 @@ func NewScanAPI(scanner *clair.Clair, store *store.Store, logger *zap.SugaredLog
 	return &ScanAPI{
 		scanner: scanner,
 		store:   store,
-		logger:  logger,
+		logger:  logger.Named("api"),
 		opt:     opt,
 	}
 }

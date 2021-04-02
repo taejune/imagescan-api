@@ -8,13 +8,10 @@ import (
 )
 
 func (h *ScanAPI) Digest(w http.ResponseWriter, r *http.Request) {
-
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
-
-	h.logger.Infow("digest", "url", c.URL, "user", c.Username, "password", c.Password,
+	h.logger.Infow("digest", "url", c.URL, "user", c.Username, "password", "...",
 		"image", img.Path, "tag", img.Tag)
-
 	digest, err := c.Digest(r.Context(), *img)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to get digest(%s): %s\n", img.Path, err), http.StatusNotFound)
@@ -37,7 +34,7 @@ func (h *ScanAPI) Manifest(w http.ResponseWriter, r *http.Request) {
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
-	h.logger.Infow("manifest", "url", c.URL, "user", c.Username, "password", c.Password,
+	h.logger.Infow("manifest", "url", c.URL, "user", c.Username, "password", "...",
 		"image", img.Path, "tag", img.Tag)
 
 	manifest, err := c.Manifest(r.Context(), img.Path, img.Reference())
@@ -62,7 +59,7 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
-	h.logger.Infow("scan", "url", c.URL, "user", c.Username, "password", c.Password,
+	h.logger.Infow("scan", "url", c.URL, "user", c.Username, "password", "...",
 		"image", img.Path, "tag", img.Tag)
 
 	digest, err := c.Digest(r.Context(), *img)
@@ -116,7 +113,7 @@ func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
-	h.logger.Infow("report", "url", c.URL, "user", c.Username, "password", c.Password,
+	h.logger.Infow("report", "url", c.URL, "user", c.Username, "password", "...",
 		"image", img.Path, "tag", img.Tag)
 
 	digest, err := c.Digest(r.Context(), *img)
