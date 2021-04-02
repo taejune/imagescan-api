@@ -70,7 +70,7 @@ func main() {
 	api := api.NewScanAPI(scanner, store, logger, &api.Opt{
 		Insecure: insecureRegistry,
 		Debug:    debug,
-		SkipPing: false,
+		SkipPing: true,
 		Timeout:  time.Minute * 5,
 	})
 
