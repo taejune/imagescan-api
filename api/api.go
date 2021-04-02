@@ -51,7 +51,19 @@ func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
 			http.Error(w, "authentication parameters missing", http.StatusUnauthorized)
 			return
 		}
-		config, _ := repoutils.GetAuthConfig(username, password, img.Domain)
+
+		// Prevent repoutils.GetAuthConfig() from loading local .docker/config.json
+		registryURL := img.Domain
+		if img.Domain == "docker.io" {
+			registryURL = "registry-1.docker.io"
+		}
+
+		config, err := repoutils.GetAuthConfig(username, password, registryURL)
+		if err != nil {
+			h.logger.Error(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		reg, err := registry.New(r.Context(), config, registry.Opt{
 			Insecure: h.opt.Insecure,
 			Debug:    h.opt.Debug,
