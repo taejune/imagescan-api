@@ -15,6 +15,9 @@
 # vendor/
 build/
 
+
+config.yaml
+
 #
 .vscode/
 .idea/
