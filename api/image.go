@@ -10,8 +10,10 @@ import (
 func (h *ScanAPI) Digest(w http.ResponseWriter, r *http.Request) {
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
+
 	h.logger.Infow("digest", "url", c.URL, "user", c.Username, "password", "...",
 		"image", img.Path, "tag", img.Tag)
+
 	digest, err := c.Digest(r.Context(), *img)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to get digest(%s): %s\n", img.Path, err), http.StatusNotFound)
@@ -30,7 +32,6 @@ func (h *ScanAPI) Digest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ScanAPI) Manifest(w http.ResponseWriter, r *http.Request) {
-
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
@@ -48,14 +49,12 @@ func (h *ScanAPI) Manifest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(dat)
 }
 
 func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
-
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
@@ -67,16 +66,17 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Failed to fetch digest(%s): %s\n", img.Path, err), http.StatusNotFound)
 		return
 	}
+
+	h.logger.Infow("check if been scanned before",
+		"digest", digest, "image", img.Path, "tag", img.Tag)
 	if IsScanning(digest) {
 		w.WriteHeader(http.StatusNotAcceptable)
 		w.Write([]byte("already in scanning"))
 		return
 	}
-	h.logger.Infow("check if been scanned before",
-		"digest", digest, "image", img.Path, "tag", img.Tag)
 	isScanned, err := h.store.Exist(string(digest))
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to fetch report(%s): %s\n", digest, err), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("failed to fetch report(%s): %s\n", digest, err), http.StatusNotFound)
 		return
 	}
 	if isScanned {
@@ -109,7 +109,6 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
-
 	img := ImageFrom(r.Context())
 	c := RegistryFrom(r.Context())
 
@@ -118,7 +117,7 @@ func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
 
 	digest, err := c.Digest(r.Context(), *img)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to fetch digest(%s): %s\n", img.Path, err), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("failed to fetch digest(%s): %s\n", img.Path, err), http.StatusNotFound)
 		return
 	}
 
@@ -128,7 +127,7 @@ func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.Infow("Fetch report from store", "digest", digest)
+	h.logger.Infow("fetch from store", "digest", digest)
 	report, err := h.store.Get(string(digest))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to fetch report(%s): %s\n", digest, err), http.StatusNotFound)

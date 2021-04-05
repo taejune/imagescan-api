@@ -80,7 +80,7 @@ func main() {
 	r.Handle("/digest", api.Middleware(api.Digest)).Methods("GET")
 	r.Handle("/manifest", api.Middleware(api.Manifest)).Methods("GET")
 	r.Handle("/scan", api.Middleware(api.Scan)).Methods("POST")
-	r.Handle("/report", api.Middleware(api.Report)).Methods("GET")
+	r.Handle("/scan", api.Middleware(api.Report)).Methods("GET")
 	// r.HandleFunc("/image/layer", api.Layer)
 
 	s := &http.Server{
