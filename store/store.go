@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/genuinetools/reg/clair"
 	"go.uber.org/zap"
 )
 
@@ -34,13 +33,13 @@ func NewStore(url string, transport *http.Transport, logger *zap.SugaredLogger) 
 }
 
 type esResponse struct {
-	Index   string                    `json:"_index"`
-	Id      string                    `json:"_id"`
-	Version int                       `json:"_ind_versionex"`
-	Score   int                       `json:"_score"`
-	Type    string                    `json:"_type"`
-	Found   bool                      `json:"found"`
-	Source  clair.VulnerabilityReport `json:"_source"`
+	Index   string                 `json:"_index"`
+	Id      string                 `json:"_id"`
+	Version int                    `json:"_ind_versionex"`
+	Score   int                    `json:"_score"`
+	Type    string                 `json:"_type"`
+	Found   bool                   `json:"found"`
+	Source  map[string]interface{} `json:"_source"`
 }
 
 func (s *Store) Exist(digest string) (bool, error) {
@@ -76,7 +75,7 @@ func (s *Store) Exist(digest string) (bool, error) {
 	return dat.Found, nil
 }
 
-func (s *Store) Get(digest string) (*clair.VulnerabilityReport, error) {
+func (s *Store) Get(digest string) (map[string]interface{}, error) {
 	index := "imgscantest"
 	doc := url.PathEscape(digest)
 	endpoint := fmt.Sprintf("%s/%s/_doc/%s", s.addr, index, doc)
@@ -104,19 +103,14 @@ func (s *Store) Get(digest string) (*clair.VulnerabilityReport, error) {
 		s.logger.Error(err)
 		return nil, err
 	}
-	return &dat.Source, nil
+	return dat.Source, nil
 }
 
-func (s *Store) Save(digest string, report clair.VulnerabilityReport) error {
+func (s *Store) Save(digest string, dat []byte) error {
 	index := "imgscantest"
 	doc := url.PathEscape(digest)
 	endpoint := fmt.Sprintf("%s/%s/_doc/%s", s.addr, index, doc)
-	dat, err := json.Marshal(report)
-	if err != nil {
-		s.logger.Error(err)
-		return err
-	}
-	s.logger.Infow("post vulnerability report", "url", endpoint, "name", report.Name)
+
 	response, err := s.client.Post(endpoint, "application/json", bytes.NewReader(dat))
 	if err != nil {
 		s.logger.Errorw("failed to post request", "url", endpoint, "msg", err)
@@ -132,6 +126,5 @@ func (s *Store) Save(digest string, report clair.VulnerabilityReport) error {
 		return err
 	}
 	defer response.Body.Close()
-	s.logger.Infow("post vulnerability report success", "url", endpoint, "name", report.Name)
 	return nil
 }

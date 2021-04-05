@@ -59,7 +59,7 @@ func main() {
 	})
 
 	// TODO: Support other storage
-	store := store.NewStore(reporterURL,
+	newStore := store.NewStore(reporterURL,
 		&http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: insecureReporter,
@@ -67,7 +67,7 @@ func main() {
 		},
 		logger,
 	)
-	api := api.NewScanAPI(scanner, store, logger, &api.Opt{
+	scanAPI := api.NewScanAPI(scanner, newStore, logger, &api.Opt{
 		Insecure: insecureRegistry,
 		Debug:    debug,
 		SkipPing: true,
@@ -76,12 +76,12 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/health", health)
-	r.HandleFunc("/registry/catalog", api.Catalog).Methods("GET")
-	r.Handle("/digest", api.Middleware(api.Digest)).Methods("GET")
-	r.Handle("/manifest", api.Middleware(api.Manifest)).Methods("GET")
-	r.Handle("/scan", api.Middleware(api.Scan)).Methods("POST")
-	r.Handle("/scan", api.Middleware(api.Report)).Methods("GET")
-	// r.HandleFunc("/image/layer", api.Layer)
+	r.HandleFunc("/registry/catalog", scanAPI.Catalog).Methods("GET")
+	r.Handle("/digest", scanAPI.Middleware(scanAPI.Digest)).Methods("GET")
+	r.Handle("/manifest", scanAPI.Middleware(scanAPI.Manifest)).Methods("GET")
+	r.Handle("/scan", scanAPI.Middleware(scanAPI.Scan)).Methods("POST")
+	r.Handle("/scan", scanAPI.Middleware(scanAPI.Report)).Methods("GET")
+	// r.HandleFunc("/image/layer", scanAPI.Layer)
 
 	s := &http.Server{
 		Addr:           ":" + strconv.Itoa(port),
@@ -95,7 +95,7 @@ func main() {
 	logger.Fatal(s.ListenAndServe())
 }
 
-func health(w http.ResponseWriter, r *http.Request) {
+func health(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_, _ = w.Write([]byte("OK"))
 }

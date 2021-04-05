@@ -11,12 +11,12 @@ type (
 	registryKey struct{}
 )
 
-func WithImage(ctx context.Context, img *registry.Image) context.Context {
-	return context.WithValue(ctx, imageKey{}, img)
+func WithImages(ctx context.Context, imgs []*registry.Image) context.Context {
+	return context.WithValue(ctx, imageKey{}, imgs)
 }
 
-func ImageFrom(ctx context.Context) *registry.Image {
-	return ctx.Value(imageKey{}).(*registry.Image)
+func ImagesFrom(ctx context.Context) []*registry.Image {
+	return ctx.Value(imageKey{}).([]*registry.Image)
 }
 
 func WithRegistry(ctx context.Context, reg *registry.Registry) context.Context {
