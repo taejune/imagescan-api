@@ -38,17 +38,23 @@ func NewScanAPI(scanner *clair.Clair, store *store.Store, logger *zap.SugaredLog
 
 func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if !ok {
+			http.Error(w, "authentication parameters missing", http.StatusUnauthorized)
+			return
+		}
+
+		insecureOpt := h.opt.Insecure
+		insecureParam := r.FormValue("insecure")
+		if insecureParam != "" {
+			insecureOpt = true
+		}
+
 		imgParam, _ := url.QueryUnescape(r.FormValue("image"))
 		img, err := registry.ParseImage(imgParam)
 		if err != nil {
 			h.logger.Error(err)
 			http.Error(w, "image parsing failed", http.StatusInternalServerError)
-			return
-		}
-		username, password, ok := r.BasicAuth()
-		if !ok {
-			h.logger.Error(err)
-			http.Error(w, "authentication parameters missing", http.StatusUnauthorized)
 			return
 		}
 
@@ -65,7 +71,7 @@ func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
 			return
 		}
 		reg, err := registry.New(r.Context(), config, registry.Opt{
-			Insecure: h.opt.Insecure,
+			Insecure: insecureOpt,
 			Debug:    h.opt.Debug,
 			SkipPing: h.opt.SkipPing,
 			Timeout:  h.opt.Timeout,
