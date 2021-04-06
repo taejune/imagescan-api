@@ -28,7 +28,7 @@ func (h *ScanAPI) Digest(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(dat)
+	_, _ = w.Write(dat)
 }
 
 func (h *ScanAPI) Manifest(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +51,7 @@ func (h *ScanAPI) Manifest(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(dat)
+	_, _ = w.Write(dat)
 }
 
 func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
@@ -69,9 +69,10 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 
 	h.logger.Infow("check if been scanned before",
 		"digest", digest, "image", img.Path, "tag", img.Tag)
+
 	if IsScanning(digest) {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("already in scanning"))
+		_, _ = w.Write([]byte("already in scanning"))
 		return
 	}
 	isScanned, err := h.store.Exist(string(digest))
@@ -81,14 +82,17 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 	}
 	if isScanned {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("already had been scanned image"))
+		_, _ = w.Write([]byte("already had been scanned image"))
 		return
 	}
+
 	go func() {
 		h.logger.Infow("start scanning",
 			"digest", digest, "image", img.Path, "tag", img.Tag)
+
 		AddScanning(digest)
 		defer RemoveScanning(digest)
+
 		report, err := h.scanner.Vulnerabilities(context.Background(), c, img.Path, img.Tag)
 		if err != nil {
 			h.logger.Error(err)
@@ -97,7 +101,8 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 		h.logger.Infow("scanning done, saving report...", "digest", digest,
 			"image", img.Path, "tag", img.Tag, "name", report.Name, "tag", report.Tag)
 
-		err = h.store.Save(string(digest), report)
+		dat, _ := json.Marshal(report)
+		err = h.store.Save(string(digest), dat)
 		if err != nil {
 			h.logger.Error(err)
 		}
@@ -105,7 +110,7 @@ func (h *ScanAPI) Scan(w http.ResponseWriter, r *http.Request) {
 			"image", img.Path, "tag", img.Tag, "name", report.Name, "tag", report.Tag)
 	}()
 	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte("ok"))
+	_, _ = w.Write([]byte("ok"))
 }
 
 func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
@@ -123,14 +128,14 @@ func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
 
 	if IsScanning(digest) {
 		w.WriteHeader(http.StatusNotAcceptable)
-		w.Write([]byte("Scanning not finished"))
+		_, _ = w.Write([]byte("Scanning not finished"))
 		return
 	}
 
 	h.logger.Infow("fetch from store", "digest", digest)
 	report, err := h.store.Get(string(digest))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to fetch report(%s): %s\n", digest, err), http.StatusNotFound)
+	if err != nil || report == nil {
+		http.Error(w, fmt.Sprintf("failed to fetch report", digest), http.StatusNotFound)
 		return
 	}
 
@@ -142,5 +147,5 @@ func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(dat)
+	_, _ = w.Write(dat)
 }
