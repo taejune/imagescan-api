@@ -38,6 +38,7 @@ func NewScanAPI(scanner *clair.Clair, store *store.Store, logger *zap.SugaredLog
 
 func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		username, password, ok := r.BasicAuth()
 		if !ok {
 			http.Error(w, "authentication parameters missing", http.StatusUnauthorized)
@@ -50,18 +51,25 @@ func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
 			insecureOpt = true
 		}
 
+		registryURL := ""
+		regParam, _ := url.QueryUnescape(r.FormValue("reg"))
 		imgParam, _ := url.QueryUnescape(r.FormValue("image"))
-		img, err := registry.ParseImage(imgParam)
-		if err != nil {
-			h.logger.Error(err)
-			http.Error(w, "image parsing failed", http.StatusInternalServerError)
-			return
-		}
-
-		// Prevent repoutils.GetAuthConfig() from loading local .docker/config.json
-		registryURL := img.Domain
-		if img.Domain == "docker.io" {
-			registryURL = "registry-1.docker.io"
+		if len(regParam) > 0 {
+			registryURL = regParam
+		} else if len(imgParam) > 0 {
+			img, err := registry.ParseImage(imgParam)
+			if err != nil {
+				http.Error(w, "image parsing failed", http.StatusInternalServerError)
+				return
+			}
+			// Prevent repoutils.GetAuthConfig() from loading local .docker/config.json
+			registryURL = img.Domain
+			if img.Domain == "docker.io" {
+				registryURL = "registry-1.docker.io"
+			}
+			ctx = WithImage(ctx, &img)
+		} else {
+			http.Error(w, "registry url missing", http.StatusBadRequest)
 		}
 
 		config, err := repoutils.GetAuthConfig(username, password, registryURL)
@@ -81,7 +89,6 @@ func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		ctx := WithImage(r.Context(), &img)
 		ctx = WithRegistry(ctx, reg)
 		next(w, r.WithContext(ctx))
 	})

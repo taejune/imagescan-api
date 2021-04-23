@@ -76,11 +76,11 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/health", health)
-	r.HandleFunc("/registry/catalog", scanAPI.Catalog).Methods("GET")
-	r.Handle("/digest", scanAPI.Middleware(scanAPI.Digest)).Methods("GET")
-	r.Handle("/manifest", scanAPI.Middleware(scanAPI.Manifest)).Methods("GET")
-	r.Handle("/scan", scanAPI.Middleware(scanAPI.Scan)).Methods("POST")
-	r.Handle("/scan", scanAPI.Middleware(scanAPI.Report)).Methods("GET")
+	r.PathPrefix("/api/catalog").Handler(scanAPI.Middleware(scanAPI.Catalog)).Methods("GET")
+	r.PathPrefix("/api/digest").Handler(scanAPI.Middleware(scanAPI.Digest)).Methods("GET")
+	r.PathPrefix("/api/manifest").Handler(scanAPI.Middleware(scanAPI.Manifest)).Methods("GET")
+	r.PathPrefix("/api/scan").Handler(scanAPI.Middleware(scanAPI.Scan)).Methods("POST")
+	r.PathPrefix("/api/scan").Handler(scanAPI.Middleware(scanAPI.Report)).Methods("GET")
 	// r.HandleFunc("/image/layer", scanAPI.Layer)
 
 	s := &http.Server{
