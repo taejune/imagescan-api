@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
-	"github.com/taejune/imagescan-api/api"
+	"github.com/taejune/imagescan-api/pkg/api"
 	"github.com/taejune/imagescan-api/store"
 )
 
