@@ -1,0 +1,10 @@
+registry:
+  insecure: false
+scanner:
+  url: "http://clair.registry-system.svc.cluster.local:6060"
+  type: "clair"
+  insecure: false
+reporter:
+  url: "http://elasticsearch.kube-logging.svc.cluster.local:9200"
+  type: "elasticsearch"
+  insecure: false

@@ -16,5 +16,5 @@ func (h *ScanAPI) Catalog(w http.ResponseWriter, r *http.Request) {
 	dat, _ := json.Marshal(catalog)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(dat)
+	_, _ = w.Write(dat)
 }

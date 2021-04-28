@@ -1,0 +1,28 @@
+version: 0.1
+log:
+  accesslog:
+    disabled: true
+  level: debug
+  formatter: text
+  fields:
+    service: registry
+    environment: staging
+loglevel: debug # deprecated: use "log"
+auth:
+  token:
+    #    autoredirect: true # should be false if realm is not
+    realm: http://192.168.0.3:8080/auth/realms/local-docker/protocol/docker-v2/auth
+    service: token-service
+    issuer: http://192.168.0.3:8080/auth/realms/local-docker
+    rootcertbundle: /root/certs/bundle
+http:
+  addr: :5000
+  tls:
+    certificate: /certs/tls.crt
+    key: /certs/tls.key
+  headers:
+    X-Content-Type-Options: [nosniff]
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+    maxthreads: 100

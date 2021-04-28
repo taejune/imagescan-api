@@ -1,0 +1,52 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: root-cert
+spec:
+  secretName: root-cert
+  subject:
+    organizations:
+      - tmaxcloud
+    countries:
+      - KR
+  commonName: tmax.io
+  isCA: true
+  dnsNames:
+    - localhost
+  issuerRef:
+    kind: Issuer
+    name: selfsigned-issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: registry-issuer
+spec:
+  ca:
+    secretName: root-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: registry-cert
+spec:
+  secretName: registry-cert
+  subject:
+    organizations:
+      - azssi
+    countries:
+      - KR
+  commonName: azssi.io
+  dnsNames:
+    - localhost
+    - registry
+  issuerRef:
+    kind: Issuer
+    name: registry-issuer
