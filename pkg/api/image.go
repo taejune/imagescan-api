@@ -135,7 +135,7 @@ func (h *ScanAPI) Report(w http.ResponseWriter, r *http.Request) {
 	h.logger.Infow("fetch from store", "digest", digest)
 	report, err := h.store.Get(string(digest))
 	if err != nil || report == nil {
-		http.Error(w, fmt.Sprintf("failed to fetch report", digest), http.StatusNotFound)
+		http.Error(w, fmt.Sprintf("failed to fetch report: %s", digest), http.StatusNotFound)
 		return
 	}
 
