@@ -4,14 +4,14 @@ on: workflow_dispatch
 
 jobs:
 
-  build:
+  notify-release-note:
     runs-on: ubuntu-latest
     steps:
       - name: Send email
         uses: dawidd6/action-send-mail@v3.0.0
         with:
           server_address: mail.tmax.co.kr
-          server_port: 995
+          server_port: 587
           username: taejune_ahn@tmax.co.kr
           password: A3tvqGk2Vs*aur
           subject: test from github workflow
