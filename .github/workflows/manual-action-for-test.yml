@@ -9,11 +9,14 @@ jobs:
     steps:
       - name: Send email
         uses: dawidd6/action-send-mail@v3.0.0
+        env:
+          USERNAME: ${{ secrets.SMTP_USERNAME }}
+          PASSWORD: ${{ secrets.SMTP_PASSWORD }}
         with:
           server_address: mail.tmax.co.kr
           server_port: 587
-          username: taejune_ahn@tmax.co.kr
-          password: A3tvqGk2Vs*aur
+          username: $USERNAME
+          password: $PASSWORD
           subject: test from github workflow
           to: taejune_ahn@tmax.co.kr
           from: taejune_ahn@tmax.co.kr
