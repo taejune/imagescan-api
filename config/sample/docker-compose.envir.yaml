@@ -1,0 +1,54 @@
+version: '3.8'
+services:
+  clair:
+    restart: always
+    image: quay.io/coreos/clair
+    ports:
+      - 6060:6060
+      - 6061:6061
+    entrypoint:  ["/usr/bin/dumb-init", "--"]
+    command: ["sh", "-c", "update-ca-certificates && exec /clair -config /config.yaml"]
+    container_name: clair
+    volumes:
+      - ./conf/clair.yaml:/config.yaml
+      - ./certs/ca.crt:/usr/local/share/ca-certificates/registry-ca.crt
+    depends_on:
+      - postgres
+
+  postgres:
+    restart: always
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    container_name: postgres
+    environment:
+      POSTGRES_PASSWORD: password
+
+  elasticsearch:
+    container_name: elasticsearch
+    image: elasticsearch:7.9.0
+    ports:
+      - 9200:9200
+      - 9300:9300
+    volumes:
+      - ./elasticsearch:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - TZ=Asia/Seoul
+    user: root
+    restart: always
+    privileged: true
+
+  kibana:
+    container_name: kibana
+    image: kibana:7.9.0
+    ports:
+      - 5601:5601
+    environment:
+      ELASTICSERCH_UTL: http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    environment:
+      - TZ=Asia/Seoul
+    restart: always
+    privileged: true

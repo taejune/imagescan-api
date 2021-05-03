@@ -1,10 +1,10 @@
 registry:
   insecure: false
 scanner:
-  url: "http://clair.registry-system.svc.cluster.local:6060"
+  url: "http://clair:6060"
   type: "clair"
-  insecure: false
+  insecure: true
 reporter:
-  url: "http://elasticsearch.kube-logging.svc.cluster.local:9200"
+  url: "http://elasticsearch:9200"
   type: "elasticsearch"
   insecure: false

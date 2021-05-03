@@ -14,7 +14,7 @@ auth:
     realm: http://192.168.0.3:8080/auth/realms/local-docker/protocol/docker-v2/auth
     service: token-service
     issuer: http://192.168.0.3:8080/auth/realms/local-docker
-    rootcertbundle: /root/certs/bundle
+    rootcertbundle: /root/certs/ca.crt
 http:
   addr: :5000
   tls:

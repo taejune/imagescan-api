@@ -1,32 +1,13 @@
 version: '3.8'
 services:
-#  api-server:
-#    build: ../../.
-#    ports:
-#    - 6000:6000
-#    command: "/main -port 6000 -debug true -scannerURL http://clair:6060"
-#    volumes:
-#      - ./conf/server.yaml:/config.yaml
-#
-#  clair:
-#    image: quay.io/coreos/clair
-#    ports:
-#      - 6060:6060
-#      - 6061:6061
-#    command: "-config /config.yaml"
-#    container_name: clair
-#    volumes:
-#      - ./conf/clair.yaml:/config.yaml
-#    depends_on:
-#      - postgres
-#
-#  postgres:
-#    image: postgres:latest
-#    ports:
-#      - 5432:5432
-#    container_name: postgres
-#    environment:
-#      POSTGRES_PASSWORD: password
+  api-server:
+    restart: always
+    build: ../../.
+    ports:
+    - 6000:6000
+    command: "/main -port 6000 -debug true -scanner-url http://clair:6060 -reporter-url http://elasticsearch:9200"
+    volumes:
+      - ./conf/server.yaml:/config.yaml
 
   keycloak:
     image: jboss/keycloak
@@ -47,10 +28,10 @@ services:
     volumes:
       - ./data:/var/lib/registry
       - ./certs:/certs
-      - ./certs/ca.crt:/root/certs/bundle
+      - ./certs/ca.crt:/root/certs/ca.crt
       - ./auth:/auth
       - ./conf/registry.yaml:/etc/docker/registry/config.yml
-#
+
 #  notary-server:
 #    image: notary:server
 #    ports:

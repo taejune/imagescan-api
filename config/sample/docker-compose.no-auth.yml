@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  api-server:
+    restart: always
+    build: ../../.
+    ports:
+      - 6000:6000
+    command: "/main -port 6000 -debug true -scanner-url http://clair:6060 -reporter-url http://elasticsearch:9200"
+    volumes:
+      - ./conf/server.yaml:/config.yaml
+    networks:
+      - default
+      - no-auth
+
+  registry:
+    restart: always
+    image: registry:2
+    ports:
+      - 5000:5000
+    container_name: registry
+    environment:
+      REGISTRY_HTTP_ADDR: 0.0.0.0:5000
+      REGISTRY_HTTP_TLS_CERTIFICATE: /certs/tls.crt
+      REGISTRY_HTTP_TLS_KEY: /certs/tls.key
+    volumes:
+      - ./data:/var/lib/registry
+      - ./certs:/certs
+      - ./certs/ca.crt:/root/certs/ca.crt
+      - ./auth:/auth
+    networks:
+      - default
+      - no-auth
+
+networks:
+  no-auth:
+    driver: bridge
