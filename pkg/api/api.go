@@ -39,11 +39,12 @@ func NewScanAPI(scanner *clair.Clair, store *store.Store, logger *zap.SugaredLog
 func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		username, password, ok := r.BasicAuth()
-		if !ok {
-			http.Error(w, "authentication parameters missing", http.StatusUnauthorized)
-			return
-		}
+		username, password, _ := r.BasicAuth()
+		// should not require all the time in case of access public repository.
+		//if !ok {
+		//	http.Error(w, "authentication parameters missing", http.StatusUnauthorized)
+		//	return
+		//}
 
 		insecureOpt := h.opt.Insecure
 		insecureParam := r.FormValue("insecure")
@@ -62,11 +63,11 @@ func (h *ScanAPI) Middleware(next http.HandlerFunc) http.Handler {
 				http.Error(w, "image parsing failed", http.StatusInternalServerError)
 				return
 			}
-			// Prevent repoutils.GetAuthConfig() from loading local .docker/config.json
 			registryURL = img.Domain
-			if img.Domain == "docker.io" {
-				registryURL = "registry-1.docker.io"
-			}
+			// XXX: Prevent repoutils.GetAuthConfig() from loading local .docker/config.json
+			//if img.Domain == "docker.io" {
+			//	registryURL = "registry-1.docker.io"
+			//}
 			ctx = WithImage(ctx, &img)
 		} else {
 			http.Error(w, "registry url missing", http.StatusBadRequest)
