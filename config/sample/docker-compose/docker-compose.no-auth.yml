@@ -2,7 +2,7 @@ version: '3.8'
 services:
   api-server:
     restart: always
-    build: ../../.
+    build: ../../..
     ports:
       - 6000:6000
     command: "/main -port 6000 -debug true -scanner-url http://clair:6060 -reporter-url http://elasticsearch:9200"
